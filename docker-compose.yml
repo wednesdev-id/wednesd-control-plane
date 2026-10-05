@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "8080:80"
+      - "8081:8080" # Traefik dashboard
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  cp-ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cp-ui.rule=Host(`cp.wednes.local`)"
+      - "traefik.http.routers.cp-ui.entrypoints=web"
+    restart: unless-stopped
+
+  cp-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cp-api.rule=Host(`cp.wednes.local`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.cp-api.entrypoints=web"
+    environment:
+      - DATABASE_URL=postgres://wednes:secret@db:5432/wednes_cp
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=wednes
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=wednes_cp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
