@@ -2,15 +2,17 @@ version: "3.8"
 
 services:
   traefik:
-    image: traefik:v3.0
+    image: traefik:latest
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
+    environment:
+      - DOCKER_API_VERSION=1.44
     ports:
-      - "8080:80"
-      - "8081:8080" # Traefik dashboard
+      - "80:80"
+      - "8081:8080" # Dashboard
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
@@ -20,8 +22,10 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.cp-ui.rule=Host(`cp.wednes.local`)"
+      - "traefik.http.routers.cp-ui.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.cp-ui.priority=1"
       - "traefik.http.routers.cp-ui.entrypoints=web"
+      - "traefik.http.services.cp-ui.loadbalancer.server.port=80"
     restart: unless-stopped
 
   cp-api:
@@ -30,8 +34,10 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.cp-api.rule=Host(`cp.wednes.local`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.cp-api.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.cp-api.priority=10"
       - "traefik.http.routers.cp-api.entrypoints=web"
+      - "traefik.http.services.cp-api.loadbalancer.server.port=3000"
     environment:
       - DATABASE_URL=postgres://wednes:secret@db:5432/wednes_cp
     depends_on:

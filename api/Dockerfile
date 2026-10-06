@@ -1,11 +1,6 @@
-FROM rust:1.99.0-alpine AS builder
-RUN apk add --no-cache musl-dev
-WORKDIR /usr/src/wednes-cp-api
-COPY . .
-RUN cargo build --release
-
-FROM alpine:latest
+FROM ubuntu:24.04
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=builder /usr/src/wednes-cp-api/target/release/wednes-cp-api /app/
+COPY target/release/wednes-cp-api /app/
 EXPOSE 3000
 CMD ["./wednes-cp-api"]
