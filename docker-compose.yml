@@ -3,6 +3,7 @@ version: "3.8"
 services:
   traefik:
     image: traefik:latest
+    restart: unless-stopped
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -38,6 +39,9 @@ services:
       - "traefik.http.routers.cp-api.priority=10"
       - "traefik.http.routers.cp-api.entrypoints=web"
       - "traefik.http.services.cp-api.loadbalancer.server.port=3000"
+    volumes:
+      - /root/artifacts:/artifacts:rw
+      - /root/wednes-engine:/wednes-engine:ro
     environment:
       - DATABASE_URL=postgres://wednes:secret@db:5432/wednes_cp
     depends_on:
