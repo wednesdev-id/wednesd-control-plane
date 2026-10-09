@@ -145,6 +145,23 @@ export default function App() {
     fetchProjects()
   }, [authToken])
 
+  const saveAndActivateProject = async (name: string, pLang: any, pFiles: Record<string, string>) => {
+    setFunctionName(name);
+    setLang(pLang);
+    setFiles(pFiles);
+    setActiveFile(Object.keys(pFiles)[0] || 'wednes.yaml');
+    setShowProjectsModal(false);
+    localStorage.setItem('wednes_current_project', name);
+    try {
+      await fetchAuth('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, lang: pLang, files: pFiles })
+      });
+      fetchProjects();
+    } catch(e) {}
+  };
+
   const handleSaveToCloud = async () => {
     setIsSaving(true)
     try {
@@ -169,6 +186,10 @@ export default function App() {
   const loadProject = async (name: string) => {
     try {
       const res = await fetchAuth(`/api/projects/${name}`)
+      if (res.status === 404) {
+        localStorage.removeItem('wednes_current_project')
+        return;
+      }
       const data = await res.json()
       if (data && data.files) {
         setFunctionName(data.name)
@@ -176,6 +197,7 @@ export default function App() {
         setFiles(typeof data.files === 'string' ? JSON.parse(data.files) : data.files)
         setActiveFile(Object.keys(typeof data.files === 'string' ? JSON.parse(data.files) : data.files)[0])
         setShowProjectsModal(false)
+        localStorage.setItem('wednes_current_project', data.name)
       }
     } catch (e) { }
   }
@@ -431,6 +453,13 @@ export default function App() {
     setIsExecuting(true);
     setTestOutput(null);
     try {
+      // Auto-save to cloud
+      fetchAuth('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: functionName, lang, files })
+      }).catch(() => {});
+
       // Auto-compile in background before running (development mode)
       await fetchAuth(`/api/deploy/${functionName}`, {
         method: 'POST',
@@ -1347,11 +1376,7 @@ export default function App() {
                     {templates && Object.keys(templates).map(k => (
                       <div key={k} className="border border-slate-700 bg-slate-800/30 hover:bg-slate-800 hover:border-blue-500 transition-colors p-4 rounded-lg flex items-center justify-between cursor-pointer"
                         onClick={() => {
-                          setFunctionName(`my-${k}-app`);
-                          setLang(templates[k].lang);
-                          setFiles(templates[k].files);
-                          setActiveFile(Object.keys(templates[k].files)[0]);
-                          setShowProjectsModal(false);
+                          saveAndActivateProject(`my-${k}-app`, templates[k].lang, templates[k].files);
                         }}
                       >
                         <div className="flex-1 pr-4">
@@ -1419,9 +1444,7 @@ export default function App() {
                             newFiles['main.go'] = TEMPLATES.go || 'package main\n\nfunc main() {}';
                           }
                           
-                          setFiles(newFiles);
-                          setActiveFile('wednes.yaml');
-                          setShowProjectsModal(false);
+                          saveAndActivateProject(projName, lang, newFiles);
                         }}
                         className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition-all"
                       >
@@ -1435,14 +1458,10 @@ export default function App() {
                   {/* Create New Card */}
                   <div 
                     onClick={() => {
-                      setFunctionName('new-project');
-                      setFiles({
+                      saveAndActivateProject('new-project', 'python', {
                         'wednes.yaml': `version: "1.0"\nname: "new-project"\nruntime:\n  memory_mb: 64\n  timeout_ms: 5000\nfunctions:\n  main:\n    handler: "app.py"\n    route: "/"\n`,
                         'app.py': TEMPLATES.python || ''
                       });
-                      setLang('python');
-                      setActiveFile('wednes.yaml');
-                      setShowProjectsModal(false);
                     }}
                     className="border border-dashed border-slate-700 rounded-lg p-5 flex flex-col items-center justify-center text-slate-400 hover:text-white hover:border-blue-500 hover:bg-blue-900/10 cursor-pointer transition-all h-32"
                   >
