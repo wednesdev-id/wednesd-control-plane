@@ -292,7 +292,7 @@ export default function App() {
   const [githubPushStatus, setGithubPushStatus] = useState<string | null>(null)
   const [isDeploying, setIsDeploying] = useState(false)
   const [deployResult, setDeployResult] = useState<string | null>(null)
-  const [testPayload, setTestPayload] = useState('{\n  "order_id": "WDN-8821",\n  "amount": 250000\n}')
+  const [testPayload, setTestPayload] = useState('{}')
   const [httpMethod, _setHttpMethod] = useState<'GET' | 'POST'>('GET')
   const [testSubPath, _setTestSubPath] = useState('')
   const [testOutput, setTestOutput] = useState<any>(null)
