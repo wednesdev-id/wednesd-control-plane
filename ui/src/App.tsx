@@ -1383,7 +1383,39 @@ export default function App() {
                         <option value="go">GO</option>
                       </select>
                       <button 
-                        onClick={() => setShowProjectsModal(false)}
+                        onClick={() => {
+                          const projName = functionName.trim() || 'my-blank-workspace';
+                          setFunctionName(projName);
+                          
+                          const handlerMap: any = {
+                            rust: 'src/lib.rs',
+                            python: 'app.py',
+                            typescript: 'src/index.ts',
+                            go: 'main.go'
+                          };
+                          const handler = handlerMap[lang] || 'src/lib.rs';
+                          
+                          const defaultYaml = `version: "1.0"\nname: "${projName}"\nruntime:\n  memory_mb: 64\n  timeout_ms: 5000\nfunctions:\n  main:\n    handler: "${handler}"\n    route: "/"\n`;
+                          
+                          const newFiles: any = {
+                            'wednes.yaml': defaultYaml
+                          };
+                          
+                          if (lang === 'rust') {
+                            newFiles['Cargo.toml'] = `[package]\nname = "${projName}"\nversion = "0.1.0"\nedition = "2021"\n\n[lib]\ncrate-type = ["cdylib"]\n\n[dependencies]\nwit-bindgen = "0.32"\nserde_json = "1.0"`;
+                            newFiles['src/lib.rs'] = TEMPLATES.rust || '';
+                          } else if (lang === 'python') {
+                            newFiles['app.py'] = TEMPLATES.python || '';
+                          } else if (lang === 'typescript') {
+                            newFiles['src/index.ts'] = TEMPLATES.typescript || 'export function handle(req: any) {\n  return { status: 200, headers: [], body: new TextEncoder().encode(\"{\\\"hello\\\": \\\"world\\\"}\") };\n}';
+                          } else {
+                            newFiles['main.go'] = TEMPLATES.go || 'package main\n\nfunc main() {}';
+                          }
+                          
+                          setFiles(newFiles);
+                          setActiveFile('wednes.yaml');
+                          setShowProjectsModal(false);
+                        }}
                         className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition-all"
                       >
                         Create Blank
@@ -1397,6 +1429,12 @@ export default function App() {
                   <div 
                     onClick={() => {
                       setFunctionName('new-project');
+                      setFiles({
+                        'wednes.yaml': `version: "1.0"\nname: "new-project"\nruntime:\n  memory_mb: 64\n  timeout_ms: 5000\nfunctions:\n  main:\n    handler: "app.py"\n    route: "/"\n`,
+                        'app.py': TEMPLATES.python || ''
+                      });
+                      setLang('python');
+                      setActiveFile('wednes.yaml');
                       setShowProjectsModal(false);
                     }}
                     className="border border-dashed border-slate-700 rounded-lg p-5 flex flex-col items-center justify-center text-slate-400 hover:text-white hover:border-blue-500 hover:bg-blue-900/10 cursor-pointer transition-all h-32"
