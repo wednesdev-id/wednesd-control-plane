@@ -306,12 +306,27 @@ export default function App() {
   useEffect(() => {
     fetch('/api/templates').then(r => r.json()).then(data => setTemplates(data)).catch(()=>{})
   }, [])
-  const [functions] = useState<FunctionItem[]>([
-    { id: 'fn_1', name: 'payment-webhook', lang: 'rust', version: 'v1.4.0', status: 'active', memoryMb: 128, invocations: 128400, p95Ms: 1.45 },
-    { id: 'fn_2', name: 'auth-validator', lang: 'typescript', version: 'v0.9.2', status: 'active', memoryMb: 64, invocations: 890450, p95Ms: 0.98 },
-    { id: 'fn_3', name: 'report-generator', lang: 'python', version: 'v2.1.0', status: 'idle', memoryMb: 256, invocations: 14200, p95Ms: 6.80 },
-    { id: 'fn_4', name: 'data-sanitizer', lang: 'go', version: 'v1.0.1', status: 'active', memoryMb: 64, invocations: 430110, p95Ms: 1.12 }
-  ])
+  const [functions, setFunctions] = useState<FunctionItem[]>([])
+  
+  useEffect(() => {
+    if (activeTab === 'functions') {
+      fetch('/api/functions')
+        .then(r => r.json())
+        .then(data => {
+          setFunctions(data.map((f:any) => ({
+            id: f.id,
+            name: f.name,
+            lang: 'rust', // derived runtime usually
+            version: f.version || '0.1.0',
+            status: f.status,
+            memoryMb: f.memoryMb || 32,
+            invocations: Math.floor(Math.random() * 1000), // To be replaced with metrics DB
+            p95Ms: 1.45
+          })))
+        })
+        .catch(()=>{})
+    }
+  }, [activeTab])
 
   const handleLangChange = (newLang: 'rust' | 'python' | 'typescript' | 'go') => {
     setLang(newLang)
