@@ -138,7 +138,7 @@ export default function App() {
   }
   const [cloudProjects, setCloudProjects] = useState<any[]>([])
   const [isSaving, setIsSaving] = useState(false)
-  const [showProjectsModal, setShowProjectsModal] = useState(false)
+  const [showProjectsModal, setShowProjectsModal] = useState(true)
 
   // Fetch projects on load
   useEffect(() => {
@@ -245,17 +245,12 @@ export default function App() {
     setContextMenu(null)
   }
   const [activeTab, setActiveTab] = useState<'editor' | 'workflows' | 'functions' | 'nodes' | 'docs' | 'billing'>('editor')
-  const [lang, setLang] = useState<'rust' | 'python' | 'typescript' | 'go'>('rust')
-  const [files, setFiles] = useState<Record<string, string>>({
-    'Cargo.toml': `[package]\nname = "active-function"\nversion = "0.1.0"\nedition = "2021"\n\n[lib]\ncrate-type = ["cdylib"]\n\n[dependencies]\nwit-bindgen = "0.32"\nserde_json = "1.0"`,
-    'src/lib.rs': TEMPLATES.rust,
-    'wednes.yaml': `version: 1.0\nname: payment-webhook\nfunctions:\n  main:\n    handler: src/lib.rs\n    route: /\n`,
-    'README.md': `# payment-webhook\n\nWednes Serverless Function`
-  })
-  const [activeFile, setActiveFile] = useState<string>('src/lib.rs')
+  const [lang, setLang] = useState<'rust' | 'python' | 'typescript' | 'go'>('python')
+  const [files, setFiles] = useState<Record<string, string>>({})
+  const [activeFile, setActiveFile] = useState<string>('')
   const [newFileName, setNewFileName] = useState<string>('')
   const [isCreatingFile, setIsCreatingFile] = useState<boolean>(false)
-  const [functionName, setFunctionName] = useState('payment-webhook')
+  const [functionName, setFunctionName] = useState('')
   const [showGithubModal, setShowGithubModal] = useState(false)
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [activeWorkflow, setActiveWorkflow] = useState<any>(null);
@@ -298,6 +293,8 @@ export default function App() {
   const [isDeploying, setIsDeploying] = useState(false)
   const [deployResult, setDeployResult] = useState<string | null>(null)
   const [testPayload, setTestPayload] = useState('{\n  "order_id": "WDN-8821",\n  "amount": 250000\n}')
+  const [httpMethod, _setHttpMethod] = useState<'GET' | 'POST'>('GET')
+  const [testSubPath, _setTestSubPath] = useState('')
   const [testOutput, setTestOutput] = useState<any>(null)
   const [isExecuting, setIsExecuting] = useState(false)
 
@@ -441,10 +438,11 @@ export default function App() {
         bodyData = testPayload;
       }
       
-      const res = await fetch(`/api/run/${functionName}`, {
-        method: 'POST',
+      const runUrl = testSubPath ? `/api/run/${functionName}${testSubPath.startsWith('/') ? testSubPath : '/' + testSubPath}` : `/api/run/${functionName}`;
+      const res = await fetch(runUrl, {
+        method: httpMethod,
         headers: { 'Content-Type': 'application/json' },
-        body: typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData || {})
+        body: httpMethod === 'GET' ? undefined : (typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData || {}))
       });
       
       const data = await res.json();
