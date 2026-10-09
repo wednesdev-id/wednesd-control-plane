@@ -431,6 +431,13 @@ export default function App() {
     setIsExecuting(true);
     setTestOutput(null);
     try {
+      // Auto-compile in background before running (development mode)
+      await fetchAuth(`/api/deploy/${functionName}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files, lang, release: false })
+      });
+      
       let bodyData = null;
       try {
         bodyData = JSON.parse(testPayload);
