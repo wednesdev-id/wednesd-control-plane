@@ -286,8 +286,9 @@ app.get('/api/nodes', (req, res) => {
 
 // ---- RUN FUNCTION ----
 
-app.all('/api/run/:name', (req, res) => {
+app.all(['/api/run/:name', '/api/run/:name/*'], (req, res) => {
     const fnName = req.params.name;
+    const subPath = req.params[0] ? '/' + req.params[0] : '';
     const bodyData = (req.body && Object.keys(req.body).length > 0) ? JSON.stringify(req.body) : '';
 
 
@@ -311,7 +312,7 @@ app.all('/api/run/:name', (req, res) => {
 
     const options = {
         hostname: '172.17.0.1', port: 8080,
-        path: '/fn/' + targetFn,
+        path: '/fn/' + targetFn + subPath,
         method: req.method,
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyData) }
     };
