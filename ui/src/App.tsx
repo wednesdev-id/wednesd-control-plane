@@ -132,7 +132,12 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setCloudProjects(data)
-        if (data.length === 0) setShowProjectsModal(true)
+        const current = localStorage.getItem('wednes_current_project');
+        if (current && data.some((p: any) => p.name === current)) {
+          loadProject(current);
+        } else if (data.length === 0) {
+          setShowProjectsModal(true)
+        }
       })
       .catch(() => {})
   }
@@ -318,6 +323,7 @@ export default function App() {
   const [httpMethod, _setHttpMethod] = useState<'GET' | 'POST'>('GET')
   const [testSubPath, _setTestSubPath] = useState('')
   const [testOutput, setTestOutput] = useState<any>(null)
+  const [outputViewMode, setOutputViewMode] = useState<'raw' | 'preview'>('raw')
   const [isExecuting, setIsExecuting] = useState(false)
 
   const [templates, setTemplates] = useState<any>(null)
@@ -481,13 +487,31 @@ export default function App() {
         body: httpMethod === 'GET' ? undefined : (typeof bodyData === 'string' ? bodyData : JSON.stringify(bodyData || {}))
       });
       
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch (err) {
+        data = {
+          status: res.status,
+          latency_us: 0,
+          headers: { 'content-type': res.headers.get('content-type') || 'text/html' },
+          output: rawText
+        };
+      }
+
+      const finalBody = data.output !== undefined ? data.output : data;
+      const isHtml = typeof finalBody === 'string' && (finalBody.trim().startsWith('<') || (data.headers && String(data.headers['content-type'] || '').includes('html')));
+      
+      if (isHtml) setOutputViewMode('preview');
+      else setOutputViewMode('raw');
+
       setTestOutput({
         status: data.status || res.status,
         latency_us: data.latency_us || 0,
         memory_used_kb: data.memory_used_kb || 0,
         headers: data.headers || {},
-        body: data.output || data
+        body: finalBody
       });
     } catch (e: any) {
       setTestOutput({
@@ -860,11 +884,38 @@ export default function App() {
                   {testOutput && (
                     <div className="flex-1 flex flex-col min-h-0 border border-slate-800 rounded bg-[#0d1117] overflow-hidden">
                       <div className="bg-slate-900/80 px-3 py-1.5 border-b border-slate-800 flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-emerald-400 font-bold">STATUS 200 OK</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold ${testOutput.status >= 200 && testOutput.status < 300 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            STATUS {testOutput.status}
+                          </span>
+                          <div className="flex bg-slate-800 rounded p-0.5 ml-2">
+                            <button 
+                              onClick={() => setOutputViewMode('raw')}
+                              className={`px-2 py-0.5 rounded text-[10px] ${outputViewMode === 'raw' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                            >
+                              Raw / JSON
+                            </button>
+                            <button 
+                              onClick={() => setOutputViewMode('preview')}
+                              className={`px-2 py-0.5 rounded text-[10px] ${outputViewMode === 'preview' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                            >
+                              HTML Preview
+                            </button>
+                          </div>
+                        </div>
                         <span className="text-slate-400">{testOutput.latency_us} µs</span>
                       </div>
-                      <div className="p-3 text-[11px] font-mono text-slate-300 overflow-auto flex-1">
-                        <pre>{JSON.stringify(testOutput.body, null, 2)}</pre>
+                      <div className={`text-[11px] font-mono overflow-auto flex-1 ${outputViewMode === 'preview' ? 'bg-white' : 'p-3 text-slate-300'}`}>
+                        {outputViewMode === 'preview' ? (
+                          <iframe 
+                            srcDoc={typeof testOutput.body === 'string' ? testOutput.body : JSON.stringify(testOutput.body, null, 2)}
+                            className="w-full h-full border-0"
+                            sandbox="allow-scripts allow-same-origin allow-forms"
+                            title="HTML Preview"
+                          />
+                        ) : (
+                          <pre>{typeof testOutput.body === 'string' ? testOutput.body : JSON.stringify(testOutput.body, null, 2)}</pre>
+                        )}
                       </div>
                     </div>
                   )}
